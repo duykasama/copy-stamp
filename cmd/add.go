@@ -5,6 +5,7 @@ package cmd
 
 import (
 	"fmt"
+	"license-generator/config"
 	"os"
 	"strings"
 
@@ -26,19 +27,19 @@ var addCmd = &cobra.Command{
 		}
 
 		licenseName = processLicenseName(licenseName)
+		// TODO: control the file permission
 		content, err := os.ReadFile(location)
 		if err != nil {
 			return fmt.Errorf("an error occurred while reading file: %s", location)
 		}
 
-		// TODO: control the file permission
 		homeDir, err := os.UserHomeDir()
 		if err != nil {
 			return fmt.Errorf("an error occurred while reading user home directory")
 		}
 
 		// TODO: control the directory permission
-		licenseDir := strings.Join([]string{homeDir, ".config", "license-generator", "licenses"}, "/")
+		licenseDir := strings.Join([]string{homeDir, config.LicenseLocation}, "/")
 		err = os.MkdirAll(licenseDir, os.ModePerm)
 		if err != nil {
 			return fmt.Errorf("an error occurred while configuring data directory")
