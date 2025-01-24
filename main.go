@@ -1,7 +1,10 @@
+/*
+Copyright © 2025 Nguyen Thanh Duy <duykasama@gmail.com>
+*/
 package main
 
-import "fmt"
+import "license-generator/cmd"
 
 func main() {
-	fmt.Println("Hello, World!")
+	cmd.Execute()
 }
