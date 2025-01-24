@@ -12,9 +12,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var licenseName string
-var location string
-
 // addCmd represents the add command
 var addCmd = &cobra.Command{
 	Use:   "add",
@@ -22,6 +19,16 @@ var addCmd = &cobra.Command{
 	// TODO: write a detail description for this command
 	Long: `Description`,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		licenseName, err := cmd.Flags().GetString("name")
+		if err != nil {
+			return fmt.Errorf("license name is required")
+		}
+
+		location, err := cmd.Flags().GetString("location")
+		if err != nil {
+			return fmt.Errorf("license location is required")
+		}
+
 		if _, err := os.Stat(location); os.IsNotExist(err) {
 			return fmt.Errorf("file does not exist: %s", location)
 		}
@@ -67,8 +74,8 @@ func processLicenseName(name string) string {
 func init() {
 	rootCmd.AddCommand(addCmd)
 
-	addCmd.Flags().StringVarP(&licenseName, "name", "n", "", "name of the license")
-	addCmd.Flags().StringVarP(&location, "location", "l", "", "location of license to add")
+	addCmd.Flags().StringP("name", "n", "", "name of the license")
+	addCmd.Flags().StringP("location", "l", "", "location of license to add")
 	addCmd.MarkFlagRequired("name")
 	addCmd.MarkFlagRequired("location")
 	addCmd.MarkFlagFilename("location")
