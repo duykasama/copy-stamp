@@ -26,27 +26,27 @@ import (
 // addCmd represents the add command
 var addCmd = &cobra.Command{
 	Use:   "add",
-	Short: "Add a new license to collection",
+	Short: "Add a new copyright template to collection",
 	// TODO: write a detail description for this command
 	Long: `Description`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		licenseName, err := cmd.Flags().GetString("name")
+		templateName, err := cmd.Flags().GetString("name")
 		if err != nil {
-			return fmt.Errorf("license name is required")
+			return fmt.Errorf("error reading template name")
 		}
 
 		location, err := cmd.Flags().GetString("location")
 		if err != nil {
-			return fmt.Errorf("license location is required")
+			return fmt.Errorf("template location is required")
 		}
 
 		if _, err := os.Stat(location); os.IsNotExist(err) {
 			return fmt.Errorf("file does not exist: %s", location)
 		}
 
-		licenseName = processLicenseName(licenseName)
+		templateName = processTemplateName(templateName)
 		// TODO: control the file permission
-		content, err := os.ReadFile(location)
+		templateContent, err := os.ReadFile(location)
 		if err != nil {
 			return fmt.Errorf("an error occurred while reading file: %s", location)
 		}
@@ -57,26 +57,26 @@ var addCmd = &cobra.Command{
 		}
 
 		// TODO: control the directory permission
-		licenseDir := strings.Join([]string{homeDir, config.LicenseLocation}, "/")
-		err = os.MkdirAll(licenseDir, os.ModePerm)
+		templatesDir := strings.Join([]string{homeDir, config.TemplatesLocation}, "/")
+		err = os.MkdirAll(templatesDir, os.ModePerm)
 		if err != nil {
 			return fmt.Errorf("an error occurred while configuring data directory")
 		}
 
 		// TODO: check if license name already exists
-		finalLocation := strings.Join([]string{licenseDir, licenseName}, "/")
-		err = os.WriteFile(finalLocation, content, os.ModePerm)
+		templateFile := strings.Join([]string{templatesDir, templateName}, "/")
+		err = os.WriteFile(templateFile, templateContent, 0644)
 		if err != nil {
-			return fmt.Errorf("an error occurred while writing to file: %s", finalLocation)
+			return fmt.Errorf("an error occurred while writing to file: %s", templateFile)
 		}
 
-		fmt.Printf("License %s added\n", licenseName)
+		fmt.Printf("Template %s added\n", templateName)
 
 		return nil
 	},
 }
 
-func processLicenseName(name string) string {
+func processTemplateName(name string) string {
 	name = strings.Trim(name, " ")
 	name = strings.Replace(name, " ", "-", -1)
 	return name
@@ -85,8 +85,8 @@ func processLicenseName(name string) string {
 func init() {
 	rootCmd.AddCommand(addCmd)
 
-	addCmd.Flags().StringP("name", "n", "", "name of the license")
-	addCmd.Flags().StringP("location", "l", "", "location of license to add")
+	addCmd.Flags().StringP("name", "n", "", "name of the template")
+	addCmd.Flags().StringP("location", "l", "", "location of template to add")
 	addCmd.MarkFlagRequired("name")
 	addCmd.MarkFlagRequired("location")
 	addCmd.MarkFlagFilename("location")

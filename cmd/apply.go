@@ -27,13 +27,13 @@ import (
 // applyCmd represents the apply command
 var applyCmd = &cobra.Command{
 	Use:   "apply",
-	Short: "Apply license template to source files",
+	Short: "Apply copyright template to source files",
 	// TODO: write a detail description for this command
 	Long: `Description`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		licenseName, err := cmd.Flags().GetString("name")
+		templateName, err := cmd.Flags().GetString("name")
 		if err != nil {
-			return fmt.Errorf("license name is required")
+			return fmt.Errorf("template name is required")
 		}
 
 		destination, err := cmd.Flags().GetString("destination")
@@ -41,7 +41,7 @@ var applyCmd = &cobra.Command{
 			return fmt.Errorf("destination is required")
 		}
 
-		extensions, err := cmd.Flags().GetStringArray("extension")
+		extensions, err := cmd.Flags().GetStringArray("extensions")
 		if err != nil {
 			return fmt.Errorf("error reading extensions")
 		}
@@ -51,18 +51,18 @@ var applyCmd = &cobra.Command{
 			return fmt.Errorf("an error occurred while reading user home directory")
 		}
 
-		license := strings.Join([]string{homeDir, config.LicenseLocation, licenseName}, "/")
-		if !fileExists(license) {
-			return fmt.Errorf("license `%s` does not exist.", licenseName)
+		template := strings.Join([]string{homeDir, config.TemplatesLocation, templateName}, "/")
+		if !fileExists(template) {
+			return fmt.Errorf("template `%s` does not exist.", templateName)
 		}
 
 		if !dirExists(destination) {
 			return fmt.Errorf("destination `%s` does not exist.", destination)
 		}
 
-		licenseContent, err := os.ReadFile(license)
+		copyrightContent, err := os.ReadFile(template)
 		if err != nil {
-			return fmt.Errorf("error reading file %s: %w", license, err)
+			return fmt.Errorf("error reading file %s: %w", template, err)
 		}
 
 		count := 0
@@ -72,24 +72,24 @@ var applyCmd = &cobra.Command{
 			}
 
 			if !entry.IsDir() && atLeastEndsWith(entry.Name(), extensions) {
-				existingContent, err := os.ReadFile(path)
+				fileContent, err := os.ReadFile(path)
 				if err != nil {
 					return fmt.Errorf("error reading file %s: %w", path, err)
 				}
 
-				if copyMarkAlreadyExists(licenseContent, existingContent) {
+				if copyrightAlreadyExists(copyrightContent, fileContent) {
 					return nil
 				}
 
-				licenseContentWithNewLine := licenseContent
-				if existingContent[0] != '\n' {
-					licenseContentWithNewLine = append(licenseContent, '\n')
+				copyrightContentWithNewLine := copyrightContent
+				if fileContent[0] != '\n' {
+					copyrightContentWithNewLine = append(copyrightContent, '\n')
 				}
 
-				updatedContent := append(licenseContentWithNewLine, existingContent...)
-				err = os.WriteFile(path, updatedContent, 0644)
+				updatedFileContent := append(copyrightContentWithNewLine, fileContent...)
+				err = os.WriteFile(path, updatedFileContent, 0644)
 				if err != nil {
-					return fmt.Errorf("error writing license for file %s: %w", path, err)
+					return fmt.Errorf("error stamping copyright for file %s: %w", path, err)
 				}
 
 				count++
@@ -98,7 +98,7 @@ var applyCmd = &cobra.Command{
 			return nil
 		})
 
-		fmt.Printf("Updated license in %d file(s).\n", count)
+		fmt.Printf("Stamped copyright in %d file(s).\n", count)
 
 		if err != nil {
 			return fmt.Errorf("error accessing path %s: %w", destination, err)
@@ -111,9 +111,9 @@ var applyCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(applyCmd)
 
-	applyCmd.Flags().StringP("name", "n", "", "name of license to apply")
-	applyCmd.Flags().StringP("destination", "d", "", "where to apply license")
-	applyCmd.Flags().StringArrayP("extension", "x", []string{}, "file extensions to be applied")
+	applyCmd.Flags().StringP("name", "n", "", "name of copyright to stamp")
+	applyCmd.Flags().StringP("destination", "d", "", "where to stamp copyright")
+	applyCmd.Flags().StringArrayP("extensions", "x", []string{}, "file extensions to be applied")
 	applyCmd.MarkFlagRequired("name")
 	applyCmd.MarkFlagRequired("destination")
 	applyCmd.MarkFlagDirname("destination")
@@ -146,7 +146,7 @@ func atLeastEndsWith(s string, suffixes []string) bool {
 	return true
 }
 
-func copyMarkAlreadyExists(copyMark, content []byte) bool {
+func copyrightAlreadyExists(copyMark, content []byte) bool {
 	for i := 0; i < len(copyMark); i++ {
 		if copyMark[i] != content[i] {
 			return false

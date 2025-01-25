@@ -26,7 +26,7 @@ import (
 // listCmd represents the list command
 var listCmd = &cobra.Command{
 	Use:   "list",
-	Short: "List all license templates",
+	Short: "List all copyright templates",
 	// TODO: write a detail description for this command
 	Long: `Description`,
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -35,13 +35,13 @@ var listCmd = &cobra.Command{
 			return fmt.Errorf("an error occurred while reading user home directory")
 		}
 
-		licenseDir := strings.Join([]string{homeDir, config.LicenseLocation}, "/")
-		dirs, err := os.ReadDir(licenseDir)
+		templateDir := strings.Join([]string{homeDir, config.TemplatesLocation}, "/")
+		dirs, err := os.ReadDir(templateDir)
 		if err != nil {
-			return fmt.Errorf("an error occurred while reading license directory")
+			return fmt.Errorf("an error occurred while reading templates directory")
 		}
 		if len(dirs) == 0 {
-			fmt.Println("There is no licenses added.")
+			fmt.Println("There is no templates added.")
 		} else {
 			for i, dir := range dirs {
 				fmt.Printf("%d. %s\n", i+1, dir.Name())
