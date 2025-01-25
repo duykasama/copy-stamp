@@ -15,10 +15,9 @@
 package cmd
 
 import (
-	"copy-stamp/config"
+	"copy-stamp/internal"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -30,13 +29,9 @@ var listCmd = &cobra.Command{
 	// TODO: write a detail description for this command
 	Long: `Description`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		homeDir, err := os.UserHomeDir()
-		if err != nil {
-			return fmt.Errorf("an error occurred while reading user home directory")
-		}
+		templatesDir, err := internal.EnsureDataDirectoryExists()
 
-		templateDir := strings.Join([]string{homeDir, config.TemplatesLocation}, "/")
-		dirs, err := os.ReadDir(templateDir)
+		dirs, err := os.ReadDir(templatesDir)
 		if err != nil {
 			return fmt.Errorf("an error occurred while reading templates directory")
 		}

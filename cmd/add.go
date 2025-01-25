@@ -15,7 +15,7 @@
 package cmd
 
 import (
-	"copy-stamp/config"
+	"copy-stamp/internal"
 	"fmt"
 	"os"
 	"strings"
@@ -51,14 +51,11 @@ var addCmd = &cobra.Command{
 			return fmt.Errorf("an error occurred while reading file: %s", location)
 		}
 
-		homeDir, err := os.UserHomeDir()
+		templatesDir, err := internal.EnsureDataDirectoryExists()
 		if err != nil {
-			return fmt.Errorf("an error occurred while reading user home directory")
+			return err
 		}
 
-		// TODO: control the directory permission
-		templatesDir := strings.Join([]string{homeDir, config.TemplatesLocation}, "/")
-		err = os.MkdirAll(templatesDir, os.ModePerm)
 		if err != nil {
 			return fmt.Errorf("an error occurred while configuring data directory")
 		}
