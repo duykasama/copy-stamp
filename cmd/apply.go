@@ -10,7 +10,7 @@
 *
 *  You should have received a copy of the GNU General Public License along with this program.
 *  If not, see <https://www.gnu.org/licenses/>.
-*/
+ */
 
 package cmd
 
@@ -77,6 +77,10 @@ var applyCmd = &cobra.Command{
 					return fmt.Errorf("error reading file %s: %w", path, err)
 				}
 
+				if copyMarkAlreadyExists(licenseContent, existingContent) {
+					return nil
+				}
+
 				licenseContentWithNewLine := licenseContent
 				if existingContent[0] != '\n' {
 					licenseContentWithNewLine = append(licenseContent, '\n')
@@ -140,4 +144,15 @@ func atLeastEndsWith(s string, suffixes []string) bool {
 	}
 
 	return false
+}
+
+func copyMarkAlreadyExists(copyMark, content []byte) bool {
+	for i := 0; i < len(copyMark); i++ {
+		if copyMark[i] != content[i] {
+			return false
+		}
+
+	}
+
+	return true
 }
