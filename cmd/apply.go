@@ -15,7 +15,7 @@
 package cmd
 
 import (
-	"copy-stamp/config"
+	"copy-stamp/internal"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -31,14 +31,18 @@ var applyCmd = &cobra.Command{
 	// TODO: write a detail description for this command
 	Long: `Description`,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) == 0 {
+			return fmt.Errorf("\"stamp apply\" requires at least one argument to execute.")
+		}
+
 		templateName, err := cmd.Flags().GetString("name")
 		if err != nil {
 			return fmt.Errorf("template name is required")
 		}
 
-		destination, err := cmd.Flags().GetString("destination")
+		templateContent, err := getTemplateContent(templateName)
 		if err != nil {
-			return fmt.Errorf("destination is required")
+			return err
 		}
 
 		extensions, err := cmd.Flags().GetStringArray("extensions")
@@ -46,63 +50,31 @@ var applyCmd = &cobra.Command{
 			return fmt.Errorf("error reading extensions")
 		}
 
-		homeDir, err := os.UserHomeDir()
-		if err != nil {
-			return fmt.Errorf("an error occurred while reading user home directory")
-		}
-
-		template := strings.Join([]string{homeDir, config.TemplatesLocation, templateName}, "/")
-		if !fileExists(template) {
-			return fmt.Errorf("template `%s` does not exist.", templateName)
-		}
-
-		if !dirExists(destination) {
-			return fmt.Errorf("destination `%s` does not exist.", destination)
-		}
-
-		copyrightContent, err := os.ReadFile(template)
-		if err != nil {
-			return fmt.Errorf("error reading file %s: %w", template, err)
-		}
-
-		count := 0
-		err = filepath.WalkDir(destination, func(path string, entry os.DirEntry, err error) error {
-			if err != nil {
-				return fmt.Errorf("error accessing path %s: %w", path, err)
+		totalFilesApplied := 0
+		for _, arg := range args {
+			info, err := os.Stat(arg)
+			if os.IsNotExist(err) {
+				return err
 			}
 
-			if !entry.IsDir() && atLeastEndsWith(entry.Name(), extensions) {
-				fileContent, err := os.ReadFile(path)
+			if info.IsDir() {
+				appliedFiles, err := applyToDirectory(arg, templateContent, extensions)
 				if err != nil {
-					return fmt.Errorf("error reading file %s: %w", path, err)
+					return err
 				}
-
-				if copyrightAlreadyExists(copyrightContent, fileContent) {
-					return nil
-				}
-
-				copyrightContentWithNewLine := copyrightContent
-				if fileContent[0] != '\n' {
-					copyrightContentWithNewLine = append(copyrightContent, '\n')
-				}
-
-				updatedFileContent := append(copyrightContentWithNewLine, fileContent...)
-				err = os.WriteFile(path, updatedFileContent, 0644)
+				totalFilesApplied += appliedFiles
+			} else {
+				applied, err := applyToFile(arg, templateContent)
 				if err != nil {
-					return fmt.Errorf("error stamping copyright for file %s: %w", path, err)
+					return err
 				}
-
-				count++
+				if applied {
+					totalFilesApplied++
+				}
 			}
-
-			return nil
-		})
-
-		fmt.Printf("Stamped copyright in %d file(s).\n", count)
-
-		if err != nil {
-			return fmt.Errorf("error accessing path %s: %w", destination, err)
 		}
+
+		fmt.Printf("Stamped copyright in %d file(s).\n", totalFilesApplied)
 
 		return nil
 	},
@@ -112,10 +84,8 @@ func init() {
 	rootCmd.AddCommand(applyCmd)
 
 	applyCmd.Flags().StringP("name", "n", "", "name of copyright to stamp")
-	applyCmd.Flags().StringP("destination", "d", "", "where to stamp copyright")
 	applyCmd.Flags().StringArrayP("extensions", "x", []string{}, "file extensions to be applied")
 	applyCmd.MarkFlagRequired("name")
-	applyCmd.MarkFlagRequired("destination")
 	applyCmd.MarkFlagDirname("destination")
 }
 
@@ -155,4 +125,78 @@ func copyrightAlreadyExists(copyMark, content []byte) bool {
 	}
 
 	return true
+}
+
+func applyToDirectory(dirToApply string, templateContent []byte, extensions []string) (int, error) {
+	if !dirExists(dirToApply) {
+		return 0, fmt.Errorf("destination `%s` does not exist.", dirToApply)
+	}
+
+	count := 0
+	err := filepath.WalkDir(dirToApply, func(path string, entry os.DirEntry, err error) error {
+		if err != nil {
+			return fmt.Errorf("error accessing path %s: %w", path, err)
+		}
+
+		if !entry.IsDir() && atLeastEndsWith(entry.Name(), extensions) {
+			applied, err := applyToFile(path, templateContent)
+			if err != nil {
+				return err
+			}
+			if applied {
+				count++
+			}
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return count, fmt.Errorf("error accessing path %s: %w", dirToApply, err)
+	}
+
+	return count, nil
+}
+
+func applyToFile(file string, templateContent []byte) (bool, error) {
+	fileContent, err := os.ReadFile(file)
+	if err != nil {
+		return false, fmt.Errorf("error reading file %s: %w", file, err)
+	}
+
+	if copyrightAlreadyExists(templateContent, fileContent) {
+		return false, nil
+	}
+
+	templateContentToApply := templateContent
+	if fileContent[0] != '\n' {
+		templateContentToApply = append(templateContent, '\n')
+	}
+
+	updatedFileContent := append(templateContentToApply, fileContent...)
+	err = os.WriteFile(file, updatedFileContent, 0644)
+	if err != nil {
+		return false, fmt.Errorf("error stamping copyright for file %s: %w", file, err)
+	}
+
+	return true, nil
+}
+
+func getTemplateContent(templateName string) ([]byte, error) {
+	templatesDir, err := internal.EnsureDataDirectoryExists()
+	if err != nil {
+		return nil, err
+	}
+
+	template := strings.Join([]string{templatesDir, templateName}, "/")
+	if !fileExists(template) {
+		return nil, fmt.Errorf("template `%s` does not exist.", templateName)
+	}
+
+	templateContent, err := os.ReadFile(template)
+	if err != nil {
+		return nil, fmt.Errorf("error reading file %s: %w", template, err)
+	}
+
+	return templateContent, nil
 }
