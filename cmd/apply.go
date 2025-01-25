@@ -138,12 +138,12 @@ func fileExists(path string) bool {
 
 func atLeastEndsWith(s string, suffixes []string) bool {
 	for _, suffix := range suffixes {
-		if strings.HasSuffix(s, suffix) {
-			return true
+		if !strings.HasSuffix(s, suffix) {
+			return false
 		}
 	}
 
-	return false
+	return true
 }
 
 func copyMarkAlreadyExists(copyMark, content []byte) bool {
