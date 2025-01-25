@@ -1,4 +1,4 @@
-module license-generator
+module copy-stamp
 
 go 1.23.4
 

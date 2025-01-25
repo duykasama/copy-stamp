@@ -15,8 +15,8 @@
 package cmd
 
 import (
+	"copy-stamp/config"
 	"fmt"
-	"license-generator/config"
 	"os"
 	"path/filepath"
 	"strings"
